@@ -1,9 +1,9 @@
-# Taquitobot
+# Taquitobot - Discord Bot To Make YouTube Shorts
 
 GitHub codebase for a personal discord bot to play music and upload automated YouTube Shorts.
 
 ##### Version 1.2.2 
-##### Last updated 2024-01-26
+##### Last updated 2025-08-13
 
 ## Commands
 Commands are followed by a "$" prefix
@@ -38,4 +38,5 @@ Command that will generate an opgg link for the specified usernames. Takes any a
 ## Additional Features
 
 ### Clip Capturing
+
 The bot will automatically recognize clips from outplayed.tv and edit them. The editing consists of converting to 9:16 aspect ratio and adding audio synced to the highlight of the clip. The program will then upload videos to the YouTube account that is currently logged in.
