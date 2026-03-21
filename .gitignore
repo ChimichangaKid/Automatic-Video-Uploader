@@ -161,3 +161,4 @@ cython_debug/
 
 discord_tokens.py
 taquitob0t/
+custom_secrets

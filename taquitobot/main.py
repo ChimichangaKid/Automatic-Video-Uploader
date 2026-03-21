@@ -1,128 +1,66 @@
 """
 main.py
 
-Control script for interfacing with bot commands using discord.py package. 
+Entry point for discord bot features.
 
-Attributes:
-    intents (discord.Intents): Discord intents object that sets permissions for 
-        the bot.
-    bot (discord.ext.commands.Bot): Discord bot object to attach commands.
-    outplayed_pattern (str): Regex string containing the outplayed.tv link for 
-        automatic video uploading.
 
-TODO:
-    - Write tests
-    - Modularize code
-
-Versioning
-    Author: Aidan (Chimichanga Kid)
-    Date: 2024-07-21
-    Version 1.2.2
-
-Notes:
-    Documentation reference can be found at 
-    https://discordpy.readthedocs.io/en/stable/.
-    Code documentation follows Google Python Style Guide when possible. See 
-    https://google.github.io/styleguide/pyguide.html for details.
 """
-import os
-import asyncio
-import re
-import nest_asyncio
+import argparse
 import discord
 from discord.ext import commands
-from clip_commands.clip_downloader.clip_downloader_discord import (
-    ClipDownloaderDiscord
+import logging
+from custom_secrets import (
+    TEST_BOT_TOKEN, random_response
 )
-from clip_commands.clip_editor.clip_prep import (
-    ClipPrepValorant,
-    ClipPrepLeagueOfLegends
-)
-from clip_commands.clip_editor.clip_editor import (
-    ClipEditor
-)
-from clip_commands.clip_uploader.clip_uploader import (
-    YouTubeUploader
-)
+from music_commands.music import MusicCommands
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--debug", action="store_true")
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+stream_handler = logging.StreamHandler()
+
+file_handler = logging.FileHandler(filename="discord.log", mode="w")
+file_handler.setLevel(logging.WARNING)
+
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
 
 
-nest_asyncio.apply()
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='$', intents=intents)
-outplayed_pattern = r"https://outplayed\.tv/media/.*"
-
+intents.message_content = True
+bot = commands.Bot(command_prefix="$", intents=intents)
 
 @bot.event
 async def on_ready():
-    """
-    Event to inform the user when the bot has logged in and is ready to receive
-    commands.
-    """
-    print('We have logged in as {0.user}'.format(bot))
-
+    print(f"Logged in as {bot.user}")
+    await bot.load_extension("music_commands.music")
 
 @bot.event
-async def on_message(message):
-    """
-    Behavior for when a message is received in a discord server. 
-    
-    Args:
-        message (discord.Message): The message that was sent in the discord 
-            channel as a discord.Message object.
-    """
-    await bot.process_commands(message)
+async def on_message(message: discord.message.Message):
     if message.author == bot.user:
         return None
+    
+    if message.author.bot:
+        return None
+    
+    await bot.process_commands(message)
 
-    content = message.content.lower()
-
-    if re.search(outplayed_pattern, content, re.IGNORECASE):
-        clip_downloader = ClipDownloaderDiscord(discord_message=content)
-        file_name = clip_downloader.download_video()
-        game_title = clip_downloader.get_game_title()
-        video_title = clip_downloader.get_video_title()
-        match game_title:
-            case "valorant":
-                clip_prep = ClipPrepValorant(video_file=file_name)
-            case "leagueoflegends":
-                clip_prep = ClipPrepLeagueOfLegends(video_file=file_name)
-            case _:
-                clip_prep = ClipPrepValorant(video_file=file_name)
-
-        clip_editor = ClipEditor(clip_prep=clip_prep)  
-        edited_clip = clip_editor.edit_and_save_video(clip_file=file_name, 
-                                                      game_title=game_title,
-                                                      video_title=video_title)
-        
-        clip_uploader = YouTubeUploader(video_title=video_title,
-                                        game_title=game_title)
-        try:
-            clip_uploader.upload_to_youtube(file_name=edited_clip)
-        except:
-            print("error uploading video")
-        finally:
-            clip_editor.remove_footage(edited_clip)
+    message_content = message.content.lower()
+    response = random_response(message=message_content)
+    
+    if response:
+        await message.channel.send(response)
 
 
-async def load():
-    """
-    Functions to load the cogs that are used for commands.
-    """
-    await bot.load_extension("music_commands.music_commands")
-    await bot.load_extension("riot.riot_requests")
+if __name__ == "__main__":
+    args = parser.parse_args()
 
+    if args.debug:
+        print("Debug mode enabled")
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
-async def main():
-    """
-    Main function to start the bot and initialize the control loop.
-    """
-    async with bot:
-        await load()
-        try:
-            await bot.run(os.environ['Discord_test_token'])
-        except:
-            os.system("kill 1")
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
+    bot.run(token=TEST_BOT_TOKEN, log_handler=file_handler)
