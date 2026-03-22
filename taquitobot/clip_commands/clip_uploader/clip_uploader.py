@@ -19,7 +19,7 @@ Notes:
 
 import os
 import time
-from .const import DESCRIPTION_TEMPLATE, COOKIES_FOLDER
+from .upload_keys import DESCRIPTION_TEMPLATE, COOKIES_FOLDER
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -84,7 +84,7 @@ class YouTubeUploader:
         """
         Helper method to navigate to video manager screen on YouTube.
         """
-        upload_button = self._driver.find_element(By.XPATH, """/html/body/ytd-app/div[1]/div[2]/ytd-masthead/div[4]/div[3]/div[2]/ytd-topbar-menu-button-renderer[1]/div/a/yt-icon-button/button""")
+        upload_button = self._driver.find_element(By.XPATH, """//button[@aria-label="Create"]""")
         upload_button.click()
 
         self._driver.implicitly_wait(5)

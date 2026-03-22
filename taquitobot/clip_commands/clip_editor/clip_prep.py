@@ -29,7 +29,7 @@ import numpy as np
 MUSIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "music/")
 FACECAM_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              "facecam_clips/")
+                              "overlays/")
 
 class ClipPrepAbstract:
     """
@@ -78,7 +78,7 @@ class ClipPrepAbstract:
             (str): The link to the facecam clip if selected, otherwise empty
                 string.
         """
-        if random.randint(1, 6) == 3:
+        if random.randint(1, 6) == 7:
             face_cam_name = random.choice(os.listdir(facecam_folder))
             self._face_cam_start_time = float(
                         re.search(r'(\d+\$\d+)', 

@@ -27,7 +27,8 @@ class MusicCommands(commands.Cog):
         self._bot: commands.Bot = bot
         self._guilds_connected: dict[int, discord.VoiceClient] = {}
 
-        self._song_queue: deque = deque()
+        self._song_queue: list[tuple[str]] = []
+        self.__current_song: str = ""
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -56,6 +57,7 @@ class MusicCommands(commands.Cog):
             return
         
         self._add_to_queue(song_title=song_title, song_url=song_url)
+        await ctx.channel.send(f"Queued song: {song_title}")
         
         voice_channel = self._guilds_connected[ctx.guild.id]
         if not voice_channel.is_playing():
@@ -65,23 +67,58 @@ class MusicCommands(commands.Cog):
     
     @commands.command(name="pause")
     async def pause(self, ctx: commands.Context) -> None:
-        raise NotImplementedError
+        """TODO: docstring"""
+        voice_channel: discord.VoiceClient = self._guilds_connected.get(ctx.guild.id)
+        if voice_channel.is_playing():
+            voice_channel.pause()
+            await ctx.channel.send(f"Paused {self.__current_song}")
+        elif voice_channel.is_paused():
+            voice_channel.resume()
+            await ctx.channel.send(f"Unpaused {self.__current_song}")
+        else:
+            await ctx.channel.send("Could not pause or unpause.")
     
     @commands.command(name="queue", aliases=["q", "Q"])
     async def queue(self, ctx: commands.Context) -> None:
-        raise NotImplementedError
+        """TODO: docstring"""
+        response = f"Currently playing {self.__current_song}"
+
+        for index, name in enumerate(self._song_queue, start=1):
+            response = response + "\n" + f"{index}. {name[0]}"
+        
+        await ctx.channel.send(response)
     
     @commands.command(name="skip", aliases=["s", "S"]) 
     async def skip(self, ctx: commands.Context) -> None:
-        raise NotImplementedError
+        """TODO: docstring"""
+        voice_channel: discord.VoiceClient = self._guilds_connected.get(ctx.guild.id)
+        if voice_channel is None:
+            return
+        elif voice_channel.is_playing() or voice_channel.is_paused():
+            voice_channel.stop()
+            await ctx.channel.send(f"Skipped song {self.__current_song}")
     
     @commands.command(name="stop")
     async def stop(self, ctx: commands.Context) -> None:
-        raise NotImplementedError
-    
-    @commands.command(name="remove", aliases=["r", "R"])
+        """TODO: dosctring"""
+        voice_channel: discord.VoiceClient = self._guilds_connected.get(ctx.guild.id)
+        if self._is_connected(ctx.guild):
+            self._song_queue.clear()
+            self.__current_song = ""
+            await voice_channel.disconnect()
+            await ctx.channel.send("Leaving call")
+        else:
+            await ctx.channel.send("Not in call")
+
+    @commands.command(name="remove")
     async def remove(self, ctx: commands.Context) -> None:
-        raise NotImplementedError
+        """TODO docstring"""
+        song_index = int(ctx.message.content.split(None, 1)[1]) - 1
+        if 0 <= song_index < len(self._song_queue):
+            name, _ = self._song_queue.pop(song_index)
+            await ctx.channel.send(f"Removed {name} from queue.")
+        else:
+            await ctx.channel.send("Could not remove from queue.")
 
     def _is_connected(self, guild: discord.Guild) -> bool:
         """
@@ -147,19 +184,17 @@ class MusicCommands(commands.Cog):
         if len(self._song_queue) <= 0:
             return
         
-        song_title, song_stream = self._song_queue.popleft()
+        song_title, song_stream = self._song_queue.pop(0)
+        self.__current_song = song_title
 
         voice_channel = self._guilds_connected[ctx.guild.id] 
 
-        self._bot.loop.create_task(f"Playing song {song_title}.")
+        self._bot.loop.create_task(ctx.channel.send(f"Playing song {song_title}."))
 
         voice_channel.play(discord.FFmpegOpusAudio(song_stream), 
-                           after=self._play_song(ctx=ctx),
+                           after=lambda x: self._play_song(ctx=ctx),
                            bitrate=64, signal_type="music")
 
-        
-        print(f"song_title is {song_title}, song_url is {song_stream}")
-  
     @staticmethod
     def _get_song_from_yt(song_name) -> tuple[str, str]:
         """
@@ -174,7 +209,7 @@ class MusicCommands(commands.Cog):
         with yt_dlp.YoutubeDL(ytdl_opts) as yt:
             song_info = yt.extract_info(f"ytsearch:{song_name}", 
                                         download=False)
-        return song_info["entries"][0]["title"], ["entries"][0]["url"]
+        return song_info["entries"][0]["title"], song_info["entries"][0]["url"]
 
 
 async def setup(bot):

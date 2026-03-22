@@ -161,4 +161,8 @@ cython_debug/
 
 discord_tokens.py
 taquitob0t/
-custom_secrets
+custom_secrets/
+music/
+overlays/
+upload_keys.py
+selenium/
