@@ -1,7 +1,7 @@
 """
 clip_downloader_abstract.py
 
-Interface for clip downloader methods to be overriden by subclass. Contains 
+Interface for clip downloader methods to be overriden by subclass. Contains
 implementation to download videos from different mediums.
 
 Attributes:
@@ -15,19 +15,23 @@ Versioning
 
 Notes:
     Private attributes are documented to assist in understanding the importance
-    of variables in the design process as well as to assist with remembering 
+    of variables in the design process as well as to assist with remembering
     for future updates.
 """
-import os
-import requests
+
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Protocol
+
+import requests
+
 
 class VideoDownloader(Protocol):
     """
     Interface for parent class of downloading videos, allows many mediums
     of download if download_video method is implemented.
     """
+
     def get_video_title(self):
         """
         Method to get the title of the video to be published.
@@ -39,31 +43,32 @@ class VideoDownloader(Protocol):
         Method to get the title of the game that is being clipped.
         """
         ...
-    
+
     def download_video(self):
         """
         Method to download the video from a file.
         """
         ...
-    
+
 
 class ClipDownloaderWebLinkAbstract(ABC, VideoDownloader):
-
     """
-    Abstract class to implement a video downloader given a web link to the 
-    file on the internet. 
+    Abstract class to implement a video downloader given a web link to the
+    file on the internet.
 
     Args:
         link (str): The link to the file on the internet as a string. Defaults
             to an empty string.
-    
+
     Attributes:
 
     """
+
     """
     Private Attributes:
         _web_link (str): The link to the web page
     """
+
     def __init__(self, link="") -> None:
         self._file_name = ""
         self._web_link = link
@@ -72,7 +77,7 @@ class ClipDownloaderWebLinkAbstract(ABC, VideoDownloader):
     def download_video(self) -> str:
         """
         Overrides the method from parent class to download the video,
-        downloads video from the given link from abstract method or link 
+        downloads video from the given link from abstract method or link
         given in the constructor.
 
         Args:
@@ -81,12 +86,12 @@ class ClipDownloaderWebLinkAbstract(ABC, VideoDownloader):
             file_name (str): The name of the file as a string where the video
                 was downloaded to.
         """
-        self._file_name = os.path.basename(self._web_link)
+        self._file_name = Path(self._web_link).name
 
         r = requests.get(self._web_link)
 
-        with open(self._file_name, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024*1024):
+        with Path(self._file_name).open("wb") as f:
+            for chunk in r.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     f.write(chunk)
 
@@ -102,11 +107,11 @@ class ClipDownloaderWebLinkAbstract(ABC, VideoDownloader):
             (str): The path to the file of the clip that is being edited.
         """
         return self._file_name
-    
+
     @abstractmethod
     def _modify_web_link(self) -> None:
         """
-        Abstract method that should allow the user to modify the link from 
+        Abstract method that should allow the user to modify the link from
         any medium.
         """
         ...
@@ -125,9 +130,8 @@ class ClipDownloaderWebLinkAbstract(ABC, VideoDownloader):
     def get_game_title(self) -> str:
         """
         Method to download the video from a file.
-        
+
         Returns
             (str): The title of the game as a string.
         """
         ...
-    

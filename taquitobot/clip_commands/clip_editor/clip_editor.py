@@ -1,128 +1,68 @@
-"""
-clip_editor.py
+""" """
 
-Implementation for editing the clip with the specified audio and video file, as
-well as syncing to the highlight depending on the game.
+import logging
+from pathlib import Path
 
-Attributes:
+from moviepy import AudioFileClip, VideoFileClip
 
-TODO:
+from taquitobot.clip_commands.clip_downloader.clip_downloader import (
+    AbstractClipDownload,
+)
+from taquitobot.clip_commands.clip_editor.clip_prep import AbstractClipPrep
 
-Versioning:
-    Author: Aidan (Chimichanga Kid)
-    Date: 2024-08-23
-    Version 1.0.0
+logger = logging.getLogger(__file__)
 
-Notes:
-
-"""
-import os
-import moviepy.editor
 
 class ClipEditor:
-    """
-    A ClipEditor is a class to handle editing and saving the video footage that
-    has been prepared by the ClipPrep object. 
+    __ASPECT_HEIGHT: int = 960
+    __ASPECT_WIDTH: int = 540
 
-    Attributes:
+    def __init__(
+        self, clip_prep: AbstractClipPrep, clip_downloader: AbstractClipDownload
+    ) -> None:
 
-    """
-    """
-    Private Attributes:
-        _clip_prep (ClipPrepAbstract): The clip prep object that contains 
-            information about how the clip should be edited.
-        _horizontal_crop (int): The amount to crop horizontally for the video
-            in order to change the aspect ratio in pixels.
-    """
+        self.__clip_prep: AbstractClipPrep = clip_prep
+        self.__clip_downloader: AbstractClipDownload = clip_downloader
 
-    def __init__(self, clip_prep: "ClipPrepAbstract") -> None:
-        self._clip_prep = clip_prep
-        self._horizontal_crop = 270
+        self.__audio = self.__clip_downloader.game_title != "LethalCompany"
 
+        self.__edited_file_name: Path = (
+            Path(__file__).parent / f"{self.__clip_downloader.game_title}_"
+            f"{self.__clip_downloader.video_title}_"
+            "tiktok_reels_shorts.mp4"
+        )
 
-    def edit_and_save_video(self, clip_file: str, game_title: str, 
-                            video_title: str) -> str:
-        """
-        Method to edit and save the video clip to the device at the root of
-        the directory. Returns the path to the edited clip.
+    def edit_video(self) -> None:
+        logging.info("Configuring clips for editting")
+        video_clip = VideoFileClip(self.__clip_downloader.clip_file)
+        audio_clip = AudioFileClip(self.__clip_prep.song_path)
 
-        Args:
-            clip_file (str): The path to the clip that is being edited.
-            game_title (str): The title of the game as a string.
-            video_title (str): The title of the video set by the user as a 
-                string.
-        Returns:
-            (str): The path to the file as a string.
-        """
-        if game_title == "LethalCompany":
-            edited_clip = self._edit_clip(clip_file=clip_file, audio=False)
-        else:
-            edited_clip = self._edit_clip(clip_file=clip_file, audio=True)
-        file_name = video_title + " " + game_title + " tiktok_youtube_shorts.mp4"
-        
-        try:
-            edited_clip.write_videofile(filename=file_name,
-                                        fps=30,
-                                        codec="libx264",
-                                        preset="superfast",
-                                        logger=None)
-        except NameError:
-            print("Video has not been processed")
-            return ""
+        clip_duration: float = video_clip.duration
 
-        return file_name
-    
-    def _edit_clip(self, clip_file: str, audio: bool) -> moviepy.editor.VideoFileClip:
-        """
-        Helper method to handle all the editing for the clip.
+        song_start_time = (
+            self.__clip_prep.song_drop_time - self.__clip_prep.first_highlight_time
+        )
 
-        Args:
-            clip_file (str): The path to the clip that is being edited.
-        Returns:
-        """
-        video_clip = moviepy.editor.VideoFileClip(clip_file)
-        audio_clip = moviepy.editor.AudioFileClip(self._clip_prep._song_name)
-        audio_start_time = self._clip_prep._song_start_time - \
-                           self._clip_prep._highlight_time[0]
-        audio_subclip = audio_clip.subclip(audio_start_time, 
-                            int(video_clip.duration + audio_start_time))
-        if audio:
-            edited_clip = video_clip.set_audio(audio_subclip)
-        else:
-            edited_clip = video_clip
-        edited_clip = edited_clip.resize(height=960, width=540)
-        centre = int(edited_clip.w / 2)
-        edited_clip = edited_clip.crop(x1=centre - self._horizontal_crop, 
-                                       y1=0,
-                                       x2=centre + self._horizontal_crop,
-                                       y2=960)
-        
-        if self._clip_prep._facecam_clip != "":
-            clip_duration = edited_clip.duration
-            face_cam_time = self._clip_prep._highlight_time[-1] - \
-                            self._clip_prep._face_cam_start_time
-            face_cam_clip = moviepy.editor.VideoFileClip(
-                            self._clip_prep._facecam_clip)
-            face_cam_clip = face_cam_clip.set_start(face_cam_time).crossfadein(1)
-            face_cam_clip = face_cam_clip.set_position(("center", "top"))
-            edited_clip = moviepy.editor.CompositeVideoClip(
-                [edited_clip, face_cam_clip]
-            ).set_end(clip_duration)
-        
-        return edited_clip
-    
-    def remove_footage(self, clip: str) -> bool:
-        """
-        Helper method to handle removing the old unedited video.
+        audio_clip = audio_clip.subclipped(
+            song_start_time, song_start_time + clip_duration
+        )
 
-        Args:
-            clip (str): Path to the file to be removed as a string.
-        Returns:
-            (bool): True if the file was there and was removed, False 
-                otherwise.
-        """
-        if os.path.exists(clip):
-            os.remove(clip)
-            return True
-        return False
-    
+        if self.__audio:
+            logger.info("Setting audio to song")
+            video_clip = video_clip.with_audio(audio_clip)
+
+        video_clip = video_clip.resized(
+            height=self.__ASPECT_HEIGHT, width=self.__ASPECT_WIDTH
+        )
+
+        video_clip.write_videofile(
+            filename=self.__edited_file_name,
+            fps=24,
+            codec="libx264",
+            preset="ultrafast",
+            logger="bar",
+        )
+
+    @property
+    def edited_file_name(self) -> Path | None:
+        return self.__edited_file_name
