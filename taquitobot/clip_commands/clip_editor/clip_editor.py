@@ -10,7 +10,18 @@ from taquitobot.clip_commands.clip_downloader.clip_downloader import (
 )
 from taquitobot.clip_commands.clip_editor.clip_prep import AbstractClipPrep
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    "%(asctime)s - [%(levelname)s] in %(name)s - %(message)s"
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 
 class ClipEditor:
@@ -33,8 +44,9 @@ class ClipEditor:
         )
 
     def edit_video(self) -> None:
-        logging.info("Configuring clips for editting")
-        video_clip = VideoFileClip(self.__clip_downloader.clip_file)
+        logger.info("Configuring clips for editting")
+        logger.info(f"Paths are {self.__clip_downloader.clip_file}")
+        video_clip = VideoFileClip(str(self.__clip_downloader.clip_file))
         audio_clip = AudioFileClip(self.__clip_prep.song_path)
 
         clip_duration: float = video_clip.duration

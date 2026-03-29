@@ -8,6 +8,17 @@ from pathlib import Path
 import cv2
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    "%(asctime)s - [%(levelname)s] in %(name)s - %(message)s"
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 MUSIC_FOLDER_PATH: Path = Path(__file__).parent.resolve() / "music"
 OVERLAY_FOLDER_PATH: Path = Path(__file__).parent.resolve() / "overlays"
@@ -15,70 +26,70 @@ OVERLAY_FOLDER_PATH: Path = Path(__file__).parent.resolve() / "overlays"
 
 class AbstractClipPrep(ABC):
     def __init__(self, video_file: Path):
-        self.__song_path: Path | None = None
-        self.__first_highlight_time: float = 0
-        self.__song_drop_time: float = 0
-        self.__overlay_path: Path | None = None
-        self.__last_highlight_time: float = 0
-        self.__overlay_drop_time: float = 0
+        self._song_path: Path | None = None
+        self._first_highlight_time: float = 0
+        self._song_drop_time: float = 0
+        self._overlay_path: Path | None = None
+        self._last_highlight_time: float = 0
+        self._overlay_drop_time: float = 0
 
-        self.__video_file: Path = video_file
+        self._video_file: Path = video_file
 
     def randomize_song(self) -> None:
         songs: list[Path] = [
             song for song in MUSIC_FOLDER_PATH.iterdir() if song.is_file()
         ]
 
-        self.__song_path = random.choice(songs)
-        logger.info(f"The randomly chosen song was {self.__song_path}")
-        self.__song_drop_time = float(
-            self.__song_path.name.split(sep="_")[0].replace(old="$", new=".")
+        self._song_path = random.choice(songs)
+        logger.info(f"The randomly chosen song was {self._song_path}")
+        self._song_drop_time = float(
+            self._song_path.name.split(sep="_")[0].replace("$", ".")
         )
-        logger.info(f"The overlay drop time is {self.__song_drop_time}")
+        logger.info(f"The overlay drop time is {self._song_drop_time}")
 
     def randomize_overlay(self) -> None:
         if random.randint(a=0, b=7) != 5:
             logger.info("No overlay chosen for this video")
-            self.__overlay_path = None
+            self._overlay_path = None
             return
 
         overlays: list[Path] = [
             overlay for overlay in OVERLAY_FOLDER_PATH.iterdir() if overlay.is_file()
         ]
 
-        self.__overlay_path = random.choice(overlays)
-        logger.info(f"The randomly chosen overlay was {self.__overlay_path}")
-        self.__overlay_drop_time = float(
-            self.__overlay_path.name.split(sep="_")[0].replace(old="$", new=".")
+        self._overlay_path = random.choice(overlays)
+        logger.info(f"The randomly chosen overlay was {self._overlay_path}")
+        self._overlay_drop_time = float(
+            self._overlay_path.name.split(sep="_")[0].replace(old="$", new=".")
         )
-        logger.info(f"The overlay drop time is {self.__overlay_drop_time}")
+        logger.info(f"The overlay drop time is {self._overlay_drop_time}")
 
     @abstractmethod
     def find_highlight_times(self) -> None: ...
 
     @property
     def song_path(self) -> Path | None:
-        return self.__song_path
+        return self._song_path
 
     @property
     def first_highlight_time(self) -> float:
-        return self.__first_highlight_time
+        return self._first_highlight_time
 
     @property
     def song_drop_time(self) -> float:
-        return self.__song_drop_time
+        return self._song_drop_time
 
     @property
     def overlay_path(self) -> Path | None:
-        return self.__overlay_path
+        return self._overlay_path
 
     @property
     def last_highlight_time(self) -> float:
-        return self.__last_highlight_time
+        return self._last_highlight_time
 
     @property
     def overlay_drop_time(self) -> float:
-        return self.__overlay_drop_time
+        return self._overlay_drop_time
 
 
 class ValorantClipPrep(AbstractClipPrep):
@@ -93,8 +104,8 @@ class ValorantClipPrep(AbstractClipPrep):
 
     def find_highlight_times(self) -> None:
 
-        video_capture: cv2.VideoCapture = cv2.VideoCapture(self.__video_file)
-        logger.info(f"Analyzing video file {self.__video_file}")
+        video_capture: cv2.VideoCapture = cv2.VideoCapture(self._video_file)
+        logger.info(f"Analyzing video file {self._video_file}")
         fps: int = video_capture.get(cv2.CAP_PROP_FPS)
         frames_to_skip: int = int(fps * self.__TIME_BETWEEN_FRAME_READS_SEC)
         delay_after_finding: int = fps * self.__TIME_TO_WAIT_AFTER_FINDING
@@ -116,6 +127,7 @@ class ValorantClipPrep(AbstractClipPrep):
             ]
 
             grayscale = cv2.cvtColor(src=cropped_frame, code=cv2.COLOR_BGR2GRAY)
+            grayscale = cv2.GaussianBlur(grayscale, (9, 9), 2)
 
             circles = cv2.HoughCircles(
                 image=grayscale,
@@ -134,12 +146,12 @@ class ValorantClipPrep(AbstractClipPrep):
 
         logger.info(f"Found highlights at times: {highlights}")
         try:
-            self.__first_highlight_time = highlights[0]
-            self.__last_highlight_time = highlights[-1]
+            self._first_highlight_time = highlights[0]
+            self._last_highlight_time = highlights[-1]
         except IndexError:
             logger.info("Found no highlights")
-            self.__first_highlight_time = self.__DEFAULT_START_TIME
-            self.__last_highlight_time = self.__DEFAULT_START_TIME
+            self._first_highlight_time = self.__DEFAULT_START_TIME
+            self._last_highlight_time = self.__DEFAULT_START_TIME
 
 
 class LeagueClipPrep(AbstractClipPrep): ...

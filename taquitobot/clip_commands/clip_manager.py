@@ -13,6 +13,18 @@ from taquitobot.clip_commands.clip_editor.clip_prep import (
 from taquitobot.clip_commands.clip_uploader.clip_uploader import YouTubeUploader
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    "%(asctime)s - [%(levelname)s] in %(name)s - %(message)s"
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
+
 
 
 class ClipManager:
@@ -29,7 +41,6 @@ class ClipManager:
     def create_video(self) -> None:
 
         logger.info("Starting ClipDownloader methods")
-        self.__clip_downloader = DiscordClipDownload(self.__message)
         downloaded_clip_path = (
             Path(__file__).parent / f"{self.__clip_downloader.video_title}.mp4"
         )
@@ -38,12 +49,14 @@ class ClipManager:
         logger.info("Starting ClipPrep methods")
         match self.__clip_downloader.game_title:
             case "Valorant":
-                self.__clip_editor = ValorantClipPrep(
+                print("Game is Valorant")
+                self.__clip_prep = ValorantClipPrep(
                     video_file=self.__clip_downloader.clip_file
                 )
-            case "_":
+            case _:
+                print("Game is Default")
                 # default will be valorant, plans to add more and default in future
-                self.__clip_editor = ValorantClipPrep(
+                self.__clip_prep = ValorantClipPrep(
                     video_file=self.__clip_downloader.clip_file
                 )
         self.__clip_prep.randomize_song()

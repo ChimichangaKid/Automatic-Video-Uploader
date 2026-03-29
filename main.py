@@ -11,7 +11,7 @@ import logging
 from re import IGNORECASE, search
 
 import discord
-from custom_secrets import (
+from taquitobot.custom_secrets import (
     BOT_TOKEN,
     TEST_BOT_TOKEN,  # noqa: F401
     random_response,
@@ -23,21 +23,19 @@ from taquitobot.clip_commands.clip_manager import ClipManager
 parser = argparse.ArgumentParser()
 parser.add_argument("--debug", action="store_true")
 
-formatter = logging.Formatter(
-    "%(asctime)s - %(levelname)s - %(message)s"
-)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(formatter)
 
-file_handler = logging.FileHandler(filename="discord.log", mode="w")
-file_handler.setLevel(logging.WARNING)
+formatter = logging.Formatter(
+    "%(asctime)s - [%(levelname)s] in %(name)s - %(message)s"
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
 
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 
 intents = discord.Intents.all()
@@ -51,7 +49,7 @@ OUTPLAYED_PATTERN = r"https://outplayed\.tv/.*"
 async def on_ready():
     print(f"Logged in as {bot.user}")
     if "music_commands.music" not in bot.extensions:
-        await bot.load_extension("music_commands.music")
+        await bot.load_extension("taquitobot.music_commands.music")
 
 
 @bot.event
@@ -85,4 +83,4 @@ if __name__ == "__main__":
     else:
         logger.setLevel(logging.INFO)
 
-    bot.run(token=BOT_TOKEN, log_handler=stream_handler)
+    bot.run(token=BOT_TOKEN)

@@ -8,27 +8,38 @@ import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    "%(asctime)s - [%(levelname)s] in %(name)s - %(message)s"
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 
 class AbstractClipDownload(ABC):
     def __init__(self, message: str) -> None:
-        self.__clip_file: Path | None = None
-        self.__game_title: str = ""
-        self.__video_title: str = ""
+        self._clip_file: Path | None = None
+        self._game_title: str = "Gaming"
+        self._video_title: str = ""
 
-        self.__message: str = message
+        self._message: str = message
 
     @property
     def clip_file(self) -> Path:
-        return self.__clip_file
+        return self._clip_file
 
     @property
     def game_title(self) -> str:
-        return self.__game_title
+        return self._game_title
 
     @property
     def video_title(self) -> str:
-        return self.__video_title
+        return self._video_title
 
     @abstractmethod
     def download_video(self) -> None: ...
@@ -59,9 +70,10 @@ class DiscordClipDownload(AbstractClipDownload):
                     f.write(chunk)
 
         logger.info(f"Completed writing video to {file_path}")
+        self._clip_file = file_path
 
     def _find_clip_information(self) -> None:
-        outplayed_url: str = self.__message.split(sep="\n")[1]
+        outplayed_url: str = self._message.split(sep="\n")[1]
         logger.info(f"Outplayed URL is {outplayed_url}")
 
         web_page: requests.Response = requests.get(url=outplayed_url)
@@ -72,10 +84,12 @@ class DiscordClipDownload(AbstractClipDownload):
 
         # example title: Highlight #Valorant | Captured by #Outplayed
         # splitting gets the second word, then trims the # from the front
-        outplayed_title = str(soup.find(name="title"))
-        self.__game_title = outplayed_title.split()[1][1:]
-        logger.info(f"Game title is {self.__game_title}")
+        outplayed_title = str(soup.find(name="title").get_text())
+        game_title = outplayed_title.split()[1][1:]
+        if game_title:
+            self._game_title = game_title
+        logger.info(f"Game title is {self._game_title}")
 
     def _find_video_title(self) -> None:
-        self.__video_title = self.__message.split(sep="\n")[0]
-        logger.info(f"Video title was found to be {self.__video_title}")
+        self._video_title = self._message.split(sep="\n")[0]
+        logger.info(f"Video title was found to be {self._video_title}")
