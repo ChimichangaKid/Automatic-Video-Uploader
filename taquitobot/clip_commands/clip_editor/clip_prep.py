@@ -6,13 +6,12 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 import cv2
+from moviepy import VideoFileClip
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter(
-    "%(asctime)s - [%(levelname)s] in %(name)s - %(message)s"
-)
+formatter = logging.Formatter("%(asctime)s - [%(levelname)s] in %(name)s - %(message)s")
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 
@@ -104,30 +103,21 @@ class ValorantClipPrep(AbstractClipPrep):
 
     def find_highlight_times(self) -> None:
 
-        video_capture: cv2.VideoCapture = cv2.VideoCapture(self._video_file)
+        video_capture: VideoFileClip = VideoFileClip(self._video_file)
+        video_capture = video_capture.cropped(
+            x1=self.__CROP_MAP["left"],
+            y1=self.__CROP_MAP["top"],
+            x2=self.__CROP_MAP["right"],
+            y2=self.__CROP_MAP["bottom"],
+        )
         logger.info(f"Analyzing video file {self._video_file}")
-        fps: int = video_capture.get(cv2.CAP_PROP_FPS)
-        frames_to_skip: int = int(fps * self.__TIME_BETWEEN_FRAME_READS_SEC)
-        delay_after_finding: int = fps * self.__TIME_TO_WAIT_AFTER_FINDING
-
-        current_frame: int = 0
+        time_interval: float = 0
         highlights: list[float] = []
-        while video_capture.isOpened():
-            video_capture.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-            ret, frame = video_capture.read()
-
-            if not ret:
-                logger.info("Did not receive a frame. Exitting video loop.")
-                video_capture.release()
-                break
-
-            cropped_frame = frame[
-                self.__CROP_MAP["top"] : self.__CROP_MAP["bottom"],
-                self.__CROP_MAP["left"] : self.__CROP_MAP["right"],
-            ]
-
-            grayscale = cv2.cvtColor(src=cropped_frame, code=cv2.COLOR_BGR2GRAY)
-            grayscale = cv2.GaussianBlur(grayscale, (9, 9), 2)
+        while time_interval < video_capture.duration:
+            colour = cv2.cvtColor(
+                video_capture.get_frame(time_interval), cv2.COLOR_RGB2BGR
+            )
+            grayscale = cv2.cvtColor(colour, cv2.COLOR_BGR2GRAY)
 
             circles = cv2.HoughCircles(
                 image=grayscale,
@@ -139,10 +129,11 @@ class ValorantClipPrep(AbstractClipPrep):
             )
 
             if circles is not None:
-                highlights.append((current_frame / fps) - self.__CLIP_DELAY_OFFSET)
-                current_frame += delay_after_finding
+                logger.info(f"Found highlight at time {time_interval}")
+                highlights.append(time_interval - self.__CLIP_DELAY_OFFSET)
+                time_interval += self.__TIME_TO_WAIT_AFTER_FINDING
             else:
-                current_frame += frames_to_skip
+                time_interval += self.__TIME_BETWEEN_FRAME_READS_SEC
 
         logger.info(f"Found highlights at times: {highlights}")
         try:
