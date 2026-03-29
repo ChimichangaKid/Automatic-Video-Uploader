@@ -38,7 +38,7 @@ class ClipManager:
         self.__clip_editor: ClipEditor | None = None
         self.__clip_uploader: YouTubeUploader | None = None
 
-    def create_video(self) -> None:
+    def create_video(self) -> str:
 
         logger.info("Starting ClipDownloader methods")
         downloaded_clip_path = (
@@ -49,12 +49,12 @@ class ClipManager:
         logger.info("Starting ClipPrep methods")
         match self.__clip_downloader.game_title:
             case "Valorant":
-                print("Game is Valorant")
+                logger.info("Game is Valorant")
                 self.__clip_prep = ValorantClipPrep(
                     video_file=self.__clip_downloader.clip_file
                 )
             case _:
-                print("Game is Default")
+                logger.info("Game is Default")
                 # default will be valorant, plans to add more and default in future
                 self.__clip_prep = ValorantClipPrep(
                     video_file=self.__clip_downloader.clip_file
@@ -71,7 +71,17 @@ class ClipManager:
 
         self.__clip_editor.edit_video()
 
+        logger.info("Starting Upload")
+
         self.__clip_uploader = YouTubeUploader(
             video_title=self.__clip_downloader.video_title,
             game_title=self.__clip_downloader.game_title,
         )
+        video_link = self.__clip_uploader.upload_to_youtube(self.__clip_editor.edited_file_name)
+
+        logger.info("Starting cleanup")
+
+        self.__clip_editor.edited_file_name.unlink()
+        self.__clip_downloader.clip_file.unlink()
+
+        return video_link

@@ -48,7 +48,7 @@ OUTPLAYED_PATTERN = r"https://outplayed\.tv/.*"
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
-    if "music_commands.music" not in bot.extensions:
+    if "taquitobot.music_commands.music" not in bot.extensions:
         await bot.load_extension("taquitobot.music_commands.music")
 
 
@@ -66,7 +66,8 @@ async def on_message(message: discord.message.Message):
 
     if search(pattern=OUTPLAYED_PATTERN, string=message_content, flags=IGNORECASE):
        clip_manager = ClipManager(message_content)
-       clip_manager.create_video()
+       link = clip_manager.create_video()
+       await message.channel.send(link)
 
     response = random_response(message=message_content.lower())
 

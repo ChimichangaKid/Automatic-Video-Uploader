@@ -37,9 +37,8 @@ class YouTubeUploader:
     def __init__(self, video_title: str, game_title: str) -> None:
         self._driver = webdriver.Chrome(service=Service(), options=chrome_options)
         self._video_title = (
-            video_title
-            + f""" #{game_title} #{game_title}Clip
-        #{game_title}Guides"""[:100]
+            (video_title
+            + f" #{game_title} #{game_title}Clip #{game_title}Guides")[:100]
         )
         self._description = DESCRIPTION_TEMPLATE.replace("placeholder", game_title)[
             :5000
@@ -74,13 +73,20 @@ class YouTubeUploader:
         video_link = link_element.get_attribute("href")
         print(f"link is {video_link}")
 
-        time.sleep(2)
+        time.sleep(3)
         publish_button = self._driver.find_element(
             By.XPATH, '//ytcp-button[@id="done-button"]'
         )
         publish_button.click()
 
-        time.sleep(3)
+        time.sleep(5)
+
+        publish_anyways = self._driver.find_element(
+            By.XPATH, "//button[.//div[text()='Publish anyway']]"
+        )
+        publish_anyways.click()
+
+        time.sleep(2)
 
         self._driver.implicitly_wait(7)
         self._driver.quit()
@@ -116,7 +122,7 @@ class YouTubeUploader:
         file_input_box = self._driver.find_element(
             By.XPATH, """//input[@type="file"]"""
         )
-        file_input_box.send_keys(video_path)
+        file_input_box.send_keys(str(video_path.resolve()))
 
     def _add_title_and_description(self) -> None:
         """

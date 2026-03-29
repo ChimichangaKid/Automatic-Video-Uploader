@@ -27,6 +27,7 @@ logger.addHandler(console_handler)
 class ClipEditor:
     __ASPECT_HEIGHT: int = 960
     __ASPECT_WIDTH: int = 540
+    __HORIZONTAL_CROP: int = 270
 
     def __init__(
         self, clip_prep: AbstractClipPrep, clip_downloader: AbstractClipDownload
@@ -66,12 +67,19 @@ class ClipEditor:
         video_clip = video_clip.resized(
             height=self.__ASPECT_HEIGHT, width=self.__ASPECT_WIDTH
         )
+        centre = int(video_clip.w / 2)
+        video_clip = video_clip.cropped(
+            x1=centre - self.__HORIZONTAL_CROP,
+            y1=0,
+            x2=centre + self.__HORIZONTAL_CROP,
+            y2=960
+        )
 
         video_clip.write_videofile(
             filename=self.__edited_file_name,
             fps=24,
             codec="libx264",
-            preset="ultrafast",
+            preset="superfast",
             logger="bar",
         )
 
