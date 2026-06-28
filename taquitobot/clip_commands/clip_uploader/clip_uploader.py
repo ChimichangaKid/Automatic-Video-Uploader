@@ -24,6 +24,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
 
 from .upload_keys import COOKIES_FOLDER, DESCRIPTION_TEMPLATE
 
@@ -81,10 +82,13 @@ class YouTubeUploader:
 
         time.sleep(5)
 
-        publish_anyways = self._driver.find_element(
-            By.XPATH, "//button[.//div[text()='Publish anyway']]"
-        )
-        publish_anyways.click()
+        try:
+            publish_anyways = self._driver.find_element(
+                By.XPATH, "//button[.//div[text()='Publish anyway']]"
+            )
+            publish_anyways.click()
+        except NoSuchElementException:
+            print("No publish anyways")
 
         time.sleep(2)
 
